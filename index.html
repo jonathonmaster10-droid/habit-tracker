@@ -1,186 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="A simple, beautiful habit tracker with daily streaks, calendar view and motivational stats." />
-  <meta name="theme-color" content="#0f1226" />
-  <title>HabitForge — Daily Habit Tracker</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%A5%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Habit Tracker - Capstone Project</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app-bg"></div>
 
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-logo">🔥</span>
-      <div>
-        <h1>HabitForge</h1>
-        <p class="brand-sub" id="todayLabel">Loading today…</p>
-      </div>
-    </div>
-    <div class="topbar-actions">
-      <button id="themeToggle" class="icon-btn" title="Toggle theme" aria-label="Toggle theme">🌙</button>
-    </div>
+  <!-- ================================================
+       SECTION 1: PAGE HEADER (Team Member 1)
+       ================================================ -->
+  <header>
+    <h1>My Habit Tracker</h1>
+    <p id="todayDate">Loading today's date...</p>
   </header>
 
-  <main class="container">
+  <main>
 
-    <!-- Motivational banner -->
-    <section class="motivation-card" aria-live="polite">
-      <div class="motivation-text">
-        <span class="motivation-emoji" id="motivationEmoji">✨</span>
-        <p id="motivationText">Small steps every day add up to big results.</p>
+    <!-- ================================================
+         SECTION 2: STATS (Team Member 6)
+         ================================================ -->
+    <section class="stats">
+      <div class="stat-box">
+        <h3>Current Streak</h3>
+        <p id="currentStreak">0 days</p>
+      </div>
+      <div class="stat-box">
+        <h3>Longest Streak</h3>
+        <p id="longestStreak">0 days</p>
+      </div>
+      <div class="stat-box">
+        <h3>Today's Progress</h3>
+        <p id="todayPercent">0%</p>
+      </div>
+      <div class="stat-box">
+        <h3>Total Done</h3>
+        <p id="totalDone">0</p>
       </div>
     </section>
 
-    <!-- Stats grid -->
-    <section class="stats-grid" aria-label="Statistics">
-      <div class="stat-card stat-streak">
-        <div class="stat-label">Current Streak</div>
-        <div class="stat-value"><span id="currentStreak">0</span><span class="stat-unit">days</span></div>
-        <div class="stat-foot">🔥 Keep it alive</div>
+    <!-- Motivational quote -->
+    <section class="quote-box">
+      <p id="quoteText">Loading...</p>
+    </section>
+
+    <!-- ================================================
+         SECTION 3: ADD HABIT FORM (Team Member 3)
+         ================================================ -->
+    <section class="card">
+      <h2>Add a New Habit</h2>
+      <div class="add-row">
+        <input type="text" id="habitInput" placeholder="e.g. Drink 2L of water" maxlength="30">
+        <button onclick="addHabit()">Add Habit</button>
       </div>
-      <div class="stat-card stat-best">
-        <div class="stat-label">Longest Streak</div>
-        <div class="stat-value"><span id="longestStreak">0</span><span class="stat-unit">days</span></div>
-        <div class="stat-foot">🏆 Personal best</div>
-      </div>
-      <div class="stat-card stat-today">
-        <div class="stat-label">Today's Progress</div>
-        <div class="stat-value"><span id="todayPercent">0</span><span class="stat-unit">%</span></div>
-        <div class="progress-bar"><div class="progress-fill" id="todayProgressFill"></div></div>
-      </div>
-      <div class="stat-card stat-total">
-        <div class="stat-label">Completions</div>
-        <div class="stat-value"><span id="totalCompletions">0</span></div>
-        <div class="stat-foot" id="completionRate">0% lifetime rate</div>
+
+      <p class="preset-label">Or pick one to start with:</p>
+      <div class="preset-row">
+        <button class="preset-btn" onclick="addPreset('Water intake')">💧 Water intake</button>
+        <button class="preset-btn" onclick="addPreset('Gym')">💪 Gym</button>
+        <button class="preset-btn" onclick="addPreset('Reading')">📚 Reading</button>
+        <button class="preset-btn" onclick="addPreset('Coding practice')">💻 Coding practice</button>
       </div>
     </section>
 
-    <!-- Today's habits -->
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Today's Habits</h2>
-        <button id="addHabitBtn" class="btn btn-primary">+ Add Habit</button>
-      </div>
-
-      <div id="habitsList" class="habits-list"></div>
-
-      <div id="emptyState" class="empty-state hidden">
-        <div class="empty-emoji">🌱</div>
-        <h3>No habits yet</h3>
-        <p>Start building your routine. Add your first habit or pick a preset below.</p>
-        <div class="preset-grid">
-          <button class="preset-btn" data-name="Water intake" data-emoji="💧" data-color="#38bdf8">💧 Water intake</button>
-          <button class="preset-btn" data-name="Gym" data-emoji="💪" data-color="#f97316">💪 Gym</button>
-          <button class="preset-btn" data-name="Reading" data-emoji="📚" data-color="#a78bfa">📚 Reading</button>
-          <button class="preset-btn" data-name="Coding practice" data-emoji="💻" data-color="#34d399">💻 Coding practice</button>
-          <button class="preset-btn" data-name="Meditation" data-emoji="🧘" data-color="#f472b6">🧘 Meditation</button>
-          <button class="preset-btn" data-name="Walk 10k steps" data-emoji="🚶" data-color="#fbbf24">🚶 Walk 10k steps</button>
-        </div>
-      </div>
+    <!-- ================================================
+         SECTION 4: HABIT LIST (Team Member 3 + 4)
+         ================================================ -->
+    <section class="card">
+      <h2>Today's Habits</h2>
+      <div id="habitList"></div>
     </section>
 
-    <!-- Calendar -->
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Calendar</h2>
-        <div class="cal-controls">
-          <button id="calPrev" class="icon-btn" aria-label="Previous month">‹</button>
-          <span id="calMonthLabel" class="cal-month-label">—</span>
-          <button id="calNext" class="icon-btn" aria-label="Next month">›</button>
-        </div>
-      </div>
-
-      <div class="cal-filter">
-        <label for="calHabitFilter">Show:</label>
-        <select id="calHabitFilter">
-          <option value="__all">All habits (combined)</option>
-        </select>
-      </div>
-
-      <div class="cal-weekdays">
+    <!-- ================================================
+         SECTION 5: CALENDAR (Team Member 5)
+         ================================================ -->
+    <section class="card">
+      <h2 id="calendarTitle">Calendar</h2>
+      <div class="weekdays">
         <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
         <span>Thu</span><span>Fri</span><span>Sat</span>
       </div>
-      <div id="calendarGrid" class="cal-grid"></div>
-
-      <div class="cal-legend">
-        <span class="legend-item"><span class="dot dot-0"></span>No data</span>
-        <span class="legend-item"><span class="dot dot-1"></span>Some</span>
-        <span class="legend-item"><span class="dot dot-2"></span>Half+</span>
-        <span class="legend-item"><span class="dot dot-3"></span>All done</span>
-      </div>
+      <div id="calendarGrid" class="calendar-grid"></div>
     </section>
 
   </main>
 
-  <!-- Add / edit habit modal -->
-  <div id="habitModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal-card">
-      <div class="modal-head">
-        <h3 id="modalTitle">New habit</h3>
-        <button id="modalClose" class="icon-btn" aria-label="Close">✕</button>
-      </div>
-      <form id="habitForm" class="modal-body">
-        <label class="field">
-          <span>Habit name</span>
-          <input id="habitName" type="text" maxlength="40" placeholder="e.g. Drink 2L of water" required />
-        </label>
-
-        <label class="field">
-          <span>Emoji</span>
-          <div class="emoji-picker" id="emojiPicker">
-            <button type="button" data-emoji="💧">💧</button>
-            <button type="button" data-emoji="💪">💪</button>
-            <button type="button" data-emoji="📚">📚</button>
-            <button type="button" data-emoji="💻">💻</button>
-            <button type="button" data-emoji="🏃">🏃</button>
-            <button type="button" data-emoji="🧘">🧘</button>
-            <button type="button" data-emoji="🥗">🥗</button>
-            <button type="button" data-emoji="🛏️">🛏️</button>
-            <button type="button" data-emoji="✍️">✍️</button>
-            <button type="button" data-emoji="🎨">🎨</button>
-            <button type="button" data-emoji="🎸">🎸</button>
-            <button type="button" data-emoji="🌅">🌅</button>
-          </div>
-          <input id="habitEmoji" type="hidden" value="💧" />
-        </label>
-
-        <label class="field">
-          <span>Color</span>
-          <div class="color-picker" id="colorPicker">
-            <button type="button" data-color="#38bdf8" style="--c:#38bdf8"></button>
-            <button type="button" data-color="#34d399" style="--c:#34d399"></button>
-            <button type="button" data-color="#f97316" style="--c:#f97316"></button>
-            <button type="button" data-color="#a78bfa" style="--c:#a78bfa"></button>
-            <button type="button" data-color="#f472b6" style="--c:#f472b6"></button>
-            <button type="button" data-color="#fbbf24" style="--c:#fbbf24"></button>
-            <button type="button" data-color="#f87171" style="--c:#f87171"></button>
-            <button type="button" data-color="#60a5fa" style="--c:#60a5fa"></button>
-          </div>
-          <input id="habitColor" type="hidden" value="#38bdf8" />
-        </label>
-
-        <input id="habitId" type="hidden" />
-
-        <div class="modal-actions">
-          <button type="button" id="deleteHabitBtn" class="btn btn-danger hidden">Delete</button>
-          <div class="spacer"></div>
-          <button type="button" id="cancelHabitBtn" class="btn btn-ghost">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Confetti canvas (for streak milestones) -->
-  <canvas id="confetti" aria-hidden="true"></canvas>
-
-  <footer class="footer">
-    <p>Built with ❤️ • Data stays on your device (localStorage)</p>
+  <footer>
+    <p>Capstone Project — Built by our team of 6</p>
   </footer>
 
   <script src="app.js"></script>

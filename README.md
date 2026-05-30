@@ -1,74 +1,92 @@
-# 🔥 HabitForge
+# Habit Tracker — Capstone Project
 
-A beautiful, zero-dependency **habit tracker** web app.
+A simple web app that helps you build good habits.
 
-Track habits like **Water intake, Gym, Reading, Coding practice**, build daily streaks, visualize your consistency on a calendar, and stay motivated.
+**Live demo:** https://jonathonmaster10-droid.github.io/habit-tracker/
 
-## ✨ Features
+## What it does
 
-- ✅ **Add, edit, and check off habits** — with custom emoji + color per habit
-- 🔥 **Daily streaks** — current streak + personal best, per-habit and overall
-- 📅 **Calendar view** — month grid that color-codes your completion ("All habits" view or per-habit filter)
-- 📊 **Motivational stats** — today's progress %, total completions, lifetime completion rate
-- 💬 **Daily motivational quote** — fresh inspiration each day
-- 🎉 **Confetti celebration** when all today's habits are complete
-- 🌙 **Dark / light theme** toggle
-- 💾 **Saves to your browser** — no account, no server, your data stays on your device
-- 📱 **Fully responsive** — works on phone, tablet, and desktop
+- Add habits you want to track (like **Water intake, Gym, Reading, Coding practice**)
+- Click "Done" each day when you finish a habit
+- See your **daily streak** and your **longest streak**
+- View a **calendar** showing which days you completed habits
+- See **motivational stats** — today's progress %, total completions
+- A fresh **motivational quote** every day
+- Your data is saved in the browser, so it stays even if you close the page
 
-## 🚀 Run it
+## How to run it on your computer
 
-### Option 1 — GitHub Pages (live server)
-The app is deployed at:
-**https://jonathonmaster10-droid.github.io/habit-tracker/**
+You only need a browser. There is no install, no build step, no framework.
 
-### Option 2 — Run locally
-Clone the repo and serve the folder with any static server:
+**Option 1 — Easiest:** Just double-click `index.html`.
 
-```bash
-git clone https://github.com/jonathonmaster10-droid/habit-tracker.git
-cd habit-tracker
-
-# Python (any 3.x)
+**Option 2 — Run a local server (recommended):**
+```
 python -m http.server 8000
+```
+Then open http://localhost:8000 in your browser.
 
-# OR Node
-npx serve .
+## What's in the project
 
-# OR just double-click index.html
+| File | What it's for |
+|---|---|
+| `index.html` | The page structure (header, stats, habits list, calendar) |
+| `styles.css` | Colors, layout, spacing — makes it look nice |
+| `app.js` | The JavaScript that adds habits, tracks streaks, draws the calendar |
+| `README.md` | This file |
+
+## Who did what (team of 6)
+
+The code in `app.js` is split into 6 clearly-labelled sections so each person has their own part to present:
+
+| Member | Section in `app.js` | What they built |
+|---|---|---|
+| **Team Member 1** | SECTION 1 | Helper functions, save/load to browser storage |
+| **Team Member 2** | SECTION 2 + `styles.css` | Date display, motivational quote, all the styling |
+| **Team Member 3** | SECTION 3 | Add habit, preset buttons, delete habit |
+| **Team Member 4** | SECTION 4 | Mark done / undo, current + longest streak math |
+| **Team Member 5** | SECTION 5 | Calendar view (the month grid) |
+| **Team Member 6** | SECTION 6 | Stats box (streaks, today %, total done) + habit list display |
+
+> Replace the names above with the real team members before presenting.
+
+## How the code works (talking points for the presentation)
+
+### Where the data lives
+
+Everything is stored in two variables at the top of `app.js`:
+
+```javascript
+let habits = ["Water intake", "Gym"];
+
+let completed = {
+  "2026-05-25": ["Water intake", "Gym"],
+  "2026-05-26": ["Water intake"]
+};
 ```
 
-Then open <http://localhost:8000>.
+That's it. The whole app is just adding/removing things from those two variables, then redrawing the page.
 
-## 🛠 Tech
+### Saving data
 
-No build step. No framework. Just:
-- `index.html`
-- `styles.css`
-- `app.js`
+Every time something changes, we call `saveData()`, which stores both variables into the browser using `localStorage`. When the page reloads, `loadData()` reads them back.
 
-State persists in `localStorage` under the key `habitforge.v1`.
+### How the streak is calculated
 
-## 📂 Project structure
+We start at today's date and walk backwards day by day. As long as the user did at least one habit that day, we add 1 to the streak. When we hit a day with nothing, we stop. (Look at `calculateCurrentStreak` in Section 4.)
 
-```
-habit-tracker/
-├── index.html      # markup
-├── styles.css      # styling, themes, responsive grid
-├── app.js          # all logic (state, streaks, calendar, stats)
-└── README.md
-```
+### How the calendar is drawn
 
-## 🧠 How streaks work
+We loop from day 1 to the last day of the month and build one `<div>` per day. If all habits were completed that day, the box turns green. If some were completed, it turns yellow. Today's box gets a blue border. (See `showCalendar` in Section 5.)
 
-- A habit's **current streak** = how many consecutive days (counting back from today) you've checked it off. If you haven't checked it today yet, the streak is computed from yesterday so you don't lose it mid-day.
-- The **longest streak** is the best consecutive run in your history for that habit.
-- The **overall streak** counts days where at least one habit was checked off.
+## Possible improvements (future work)
 
-## 🤝 Contributing
-
-Capstone project — feel free to fork and adapt.
+- Let users pick custom emojis and colors for their habits
+- Show charts (weekly bar chart of completions)
+- Reminders / notifications
+- Export data as a file
+- A way to sync data across devices (would need a backend)
 
 ---
 
-Built with ❤️ for the capstone project.
+Built for our capstone project.

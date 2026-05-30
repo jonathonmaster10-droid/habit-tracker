@@ -1,566 +1,487 @@
-/* =========================================================
- * HabitForge — vanilla JS habit tracker
- * Storage: localStorage
- * ========================================================= */
+/* =====================================================
+   HABIT TRACKER - JavaScript
+   Capstone Project
 
-const STORAGE_KEY = 'habitforge.v1';
-const THEME_KEY = 'habitforge.theme';
+   This file is split into 6 sections so each team
+   member can present their own part.
+   ===================================================== */
 
-const MOTIVATION = [
-  { emoji: '🌱', text: 'Small steps every day add up to big results.' },
-  { emoji: '🔥', text: "Discipline is choosing what you want most over what you want now." },
-  { emoji: '⚡', text: 'You don\'t have to be extreme — just consistent.' },
-  { emoji: '🚀', text: 'A year from now you will wish you had started today.' },
-  { emoji: '🌟', text: 'Habits are the compound interest of self-improvement.' },
-  { emoji: '🎯', text: 'Don\'t break the chain.' },
-  { emoji: '💎', text: 'Pressure makes diamonds. Stay with it.' },
-  { emoji: '🏔️', text: 'Every expert was once a beginner. Keep climbing.' },
-  { emoji: '🌊', text: 'Drop by drop, the ocean is filled.' },
-  { emoji: '🦋', text: 'Be patient with yourself. Growth takes time.' },
-  { emoji: '🎉', text: 'You\'re building the future you. Show up today.' },
-  { emoji: '💪', text: 'Strength is built one rep at a time — literal or otherwise.' },
+
+/* =====================================================
+   GLOBAL DATA
+   These two variables hold everything our app remembers.
+   ===================================================== */
+
+// This list keeps all the habit names the user added.
+// Example: ["Water intake", "Gym", "Reading"]
+let habits = [];
+
+// This object remembers which habits were finished on which day.
+// The key is the date as text, and the value is a list of habit names.
+// Example:
+//   completed["2026-05-25"] = ["Water intake", "Gym"]
+//   completed["2026-05-26"] = ["Water intake"]
+let completed = {};
+
+// A list of motivational quotes. We pick one each day.
+let quotes = [
+  "Small steps every day lead to big results!",
+  "Don't break the chain — keep going!",
+  "Discipline beats motivation.",
+  "You are what you repeatedly do.",
+  "Progress, not perfection.",
+  "One day at a time.",
+  "A little bit every day is better than a lot once in a while.",
+  "Believe you can and you're halfway there.",
+  "The secret of getting ahead is getting started."
 ];
 
-// ------------------- State -------------------
-let state = loadState();
-let viewDate = startOfMonth(new Date());   // for calendar nav
-let calFilter = '__all';                   // which habit to display in calendar
-let editingId = null;
 
-// ------------------- Helpers -------------------
-function todayKey(d = new Date()) {
-  // Use LOCAL date parts so the key matches what the user sees as "today"
-  // (toISOString() returns UTC, which can be a day ahead/behind their local date)
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+/* =====================================================
+   SECTION 1 (Team Member 1)
+   HELPER FUNCTIONS + SAVE / LOAD
+   These functions help the rest of the program.
+   ===================================================== */
+
+// Returns today's date as a string like "2026-05-25"
+function getTodayString() {
+  let today = new Date();
+  return formatDate(today);
 }
-function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
-function endOfMonth(d)   { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
-function addDays(d, n)   { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
-function uuid()          { return 'h_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) { /* ignore */ }
-  return {
-    habits: [],
-    // log: { 'YYYY-MM-DD': { habitId: true } }
-    log: {},
+// Takes a Date object and gives back a string "YYYY-MM-DD"
+function formatDate(dateObject) {
+  let year = dateObject.getFullYear();
+  let month = dateObject.getMonth() + 1;  // months start at 0 in JS
+  let day = dateObject.getDate();
+
+  // Put a 0 in front if the number is less than 10
+  if (month < 10) {
+    month = "0" + month;
+  }
+  if (day < 10) {
+    day = "0" + day;
+  }
+
+  return year + "-" + month + "-" + day;
+}
+
+// Save our data into the browser so it stays after a refresh
+function saveData() {
+  localStorage.setItem("habits", JSON.stringify(habits));
+  localStorage.setItem("completed", JSON.stringify(completed));
+}
+
+// Load saved data when the page opens
+function loadData() {
+  let savedHabits = localStorage.getItem("habits");
+  let savedCompleted = localStorage.getItem("completed");
+
+  if (savedHabits !== null) {
+    habits = JSON.parse(savedHabits);
+  }
+  if (savedCompleted !== null) {
+    completed = JSON.parse(savedCompleted);
+  }
+}
+
+
+/* =====================================================
+   SECTION 2 (Team Member 2)
+   SHOW THE DATE + THE QUOTE
+   ===================================================== */
+
+function showDate() {
+  let today = new Date();
+  let options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
   };
+  let nice = today.toLocaleDateString(undefined, options);
+  document.getElementById("todayDate").textContent = nice;
 }
 
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    console.warn('Storage failed', e);
-  }
+function showQuote() {
+  // Use the day number so the quote changes once per day
+  let dayNumber = new Date().getDate();
+  let index = dayNumber % quotes.length;
+  document.getElementById("quoteText").textContent = quotes[index];
 }
 
-function isDone(habitId, key) {
-  return !!(state.log[key] && state.log[key][habitId]);
-}
 
-function toggleHabit(habitId) {
-  const key = todayKey();
-  const day = state.log[key] || {};
-  const newVal = !day[habitId];
-  day[habitId] = newVal;
-  if (!newVal) delete day[habitId];
-  if (Object.keys(day).length) state.log[key] = day;
-  else delete state.log[key];
-  saveState();
+/* =====================================================
+   SECTION 3 (Team Member 3)
+   ADD AND DELETE HABITS
+   ===================================================== */
 
-  if (allDoneToday()) confettiBurst();
-}
+// Called when the "Add Habit" button is clicked
+function addHabit() {
+  let input = document.getElementById("habitInput");
+  let name = input.value.trim();
 
-function allDoneToday() {
-  if (!state.habits.length) return false;
-  const key = todayKey();
-  return state.habits.every(h => isDone(h.id, key));
-}
-
-// ------------------- Streak calculations -------------------
-function habitStreak(habitId, refDate = new Date()) {
-  // current streak: count back from today as long as habit is done.
-  // If today is not yet done, still allow streak using yesterday as anchor.
-  let streak = 0;
-  let cursor = new Date(refDate);
-  const todayK = todayKey(refDate);
-  if (!isDone(habitId, todayK)) {
-    cursor = addDays(cursor, -1);
-  }
-  while (isDone(habitId, todayKey(cursor))) {
-    streak++;
-    cursor = addDays(cursor, -1);
-    if (streak > 3650) break; // safety
-  }
-  return streak;
-}
-
-function habitLongest(habitId) {
-  const keys = Object.keys(state.log).filter(k => state.log[k][habitId]).sort();
-  let best = 0, cur = 0, prev = null;
-  for (const k of keys) {
-    if (prev && nextDayKey(prev) === k) cur++;
-    else cur = 1;
-    if (cur > best) best = cur;
-    prev = k;
-  }
-  return best;
-}
-
-function nextDayKey(k) {
-  const d = new Date(k + 'T00:00:00');
-  d.setDate(d.getDate() + 1);
-  return todayKey(d);
-}
-
-function overallCurrentStreak() {
-  // Days where AT LEAST one habit was completed, counting back from today.
-  if (!state.habits.length) return 0;
-  let streak = 0;
-  let cursor = new Date();
-  if (!dayHasAny(todayKey(cursor))) cursor = addDays(cursor, -1);
-  while (dayHasAny(todayKey(cursor))) {
-    streak++;
-    cursor = addDays(cursor, -1);
-    if (streak > 3650) break;
-  }
-  return streak;
-}
-
-function dayHasAny(key) {
-  return !!(state.log[key] && Object.keys(state.log[key]).length);
-}
-
-function overallLongestStreak() {
-  const keys = Object.keys(state.log).filter(k => dayHasAny(k)).sort();
-  let best = 0, cur = 0, prev = null;
-  for (const k of keys) {
-    if (prev && nextDayKey(prev) === k) cur++;
-    else cur = 1;
-    if (cur > best) best = cur;
-    prev = k;
-  }
-  return best;
-}
-
-function totalCompletions() {
-  let n = 0;
-  for (const k of Object.keys(state.log)) n += Object.keys(state.log[k]).length;
-  return n;
-}
-
-function lifetimeRate() {
-  if (!state.habits.length) return 0;
-  // Earliest log date -> today, inclusive
-  const keys = Object.keys(state.log).sort();
-  if (!keys.length) return 0;
-  const first = new Date(keys[0] + 'T00:00:00');
-  const today = new Date();
-  const days = Math.max(1, Math.floor((today - first) / 86400000) + 1);
-  const expected = days * state.habits.length;
-  const done = totalCompletions();
-  return Math.round((done / expected) * 100);
-}
-
-// ------------------- Rendering -------------------
-function render() {
-  renderTodayLabel();
-  renderMotivation();
-  renderStats();
-  renderHabits();
-  renderCalendar();
-  renderCalendarFilter();
-}
-
-function renderTodayLabel() {
-  const opts = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
-  document.getElementById('todayLabel').textContent =
-    new Date().toLocaleDateString(undefined, opts);
-}
-
-function renderMotivation() {
-  // Pick a stable-per-day motivation
-  const seed = new Date().getDate() + new Date().getMonth() * 31;
-  const item = MOTIVATION[seed % MOTIVATION.length];
-  document.getElementById('motivationEmoji').textContent = item.emoji;
-  document.getElementById('motivationText').textContent = item.text;
-}
-
-function renderStats() {
-  const cur = overallCurrentStreak();
-  const best = Math.max(overallLongestStreak(), cur);
-  document.getElementById('currentStreak').textContent = cur;
-  document.getElementById('longestStreak').textContent = best;
-
-  const key = todayKey();
-  const dayLog = state.log[key] || {};
-  const total = state.habits.length;
-  const done = total ? state.habits.filter(h => dayLog[h.id]).length : 0;
-  const pct = total ? Math.round((done / total) * 100) : 0;
-  document.getElementById('todayPercent').textContent = pct;
-  document.getElementById('todayProgressFill').style.width = pct + '%';
-
-  document.getElementById('totalCompletions').textContent = totalCompletions();
-  document.getElementById('completionRate').textContent = lifetimeRate() + '% lifetime rate';
-}
-
-function renderHabits() {
-  const list = document.getElementById('habitsList');
-  const empty = document.getElementById('emptyState');
-  list.innerHTML = '';
-
-  if (!state.habits.length) {
-    empty.classList.remove('hidden');
-    list.classList.add('hidden');
+  if (name === "") {
+    alert("Please type a habit name!");
     return;
   }
-  empty.classList.add('hidden');
-  list.classList.remove('hidden');
 
-  const key = todayKey();
-  for (const habit of state.habits) {
-    const done = isDone(habit.id, key);
-    const streak = habitStreak(habit.id);
-    const longest = habitLongest(habit.id);
-
-    const item = document.createElement('div');
-    item.className = 'habit-item' + (done ? ' done' : '');
-    item.style.setProperty('--habit-color', habit.color);
-
-    item.innerHTML = `
-      <div class="habit-emoji" aria-hidden="true">${habit.emoji}</div>
-      <div class="habit-info">
-        <div class="habit-name">
-          ${escapeHtml(habit.name)}
-          ${streak > 0 ? `<span class="habit-streak">🔥 ${streak}d streak</span>` : ''}
-        </div>
-        <div class="habit-meta">
-          <span>Longest: ${longest}d</span>
-          <span>Total: ${countCompletions(habit.id)}</span>
-        </div>
-      </div>
-      <div class="habit-actions">
-        <button class="edit-btn" data-edit="${habit.id}" title="Edit" aria-label="Edit habit">✎</button>
-        <button class="check-btn" data-toggle="${habit.id}" aria-label="${done ? 'Mark as not done' : 'Mark as done'}">✓</button>
-      </div>
-    `;
-    list.appendChild(item);
-  }
-}
-
-function countCompletions(habitId) {
-  let n = 0;
-  for (const k of Object.keys(state.log)) if (state.log[k][habitId]) n++;
-  return n;
-}
-
-function renderCalendarFilter() {
-  const sel = document.getElementById('calHabitFilter');
-  const prev = calFilter;
-  sel.innerHTML = '<option value="__all">All habits (combined)</option>';
-  for (const h of state.habits) {
-    const opt = document.createElement('option');
-    opt.value = h.id;
-    opt.textContent = `${h.emoji} ${h.name}`;
-    sel.appendChild(opt);
-  }
-  // restore
-  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
-  else { sel.value = '__all'; calFilter = '__all'; }
-}
-
-function renderCalendar() {
-  const grid = document.getElementById('calendarGrid');
-  const label = document.getElementById('calMonthLabel');
-  grid.innerHTML = '';
-
-  label.textContent = viewDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-
-  const first = startOfMonth(viewDate);
-  const last = endOfMonth(viewDate);
-  const startDow = first.getDay(); // 0 = Sun
-  const totalDays = last.getDate();
-  const totalCells = Math.ceil((startDow + totalDays) / 7) * 7;
-
-  const todayK = todayKey();
-
-  for (let i = 0; i < totalCells; i++) {
-    const dayNum = i - startDow + 1;
-    const cell = document.createElement('div');
-    cell.className = 'cal-cell';
-
-    if (dayNum < 1 || dayNum > totalDays) {
-      cell.classList.add('outside');
-      const fillerDate = new Date(first);
-      fillerDate.setDate(dayNum);
-      cell.innerHTML = `<div class="cell-date">${fillerDate.getDate()}</div>`;
-      grid.appendChild(cell);
-      continue;
+  // Don't allow duplicates
+  for (let i = 0; i < habits.length; i++) {
+    if (habits[i] === name) {
+      alert("You already have this habit!");
+      return;
     }
+  }
 
-    const cellDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), dayNum);
-    const k = todayKey(cellDate);
-    const dayLog = state.log[k] || {};
+  habits.push(name);
+  input.value = "";
+  saveData();
+  showEverything();
+}
 
-    let dotLevel = 0;
-    let metaText = '';
+// Called when a preset button is clicked (e.g. "Water intake")
+function addPreset(name) {
+  // Don't allow duplicates
+  for (let i = 0; i < habits.length; i++) {
+    if (habits[i] === name) {
+      alert("You already have this habit!");
+      return;
+    }
+  }
 
-    if (calFilter === '__all') {
-      const total = state.habits.length;
-      const done = total ? state.habits.filter(h => dayLog[h.id]).length : 0;
-      if (total) {
-        const ratio = done / total;
-        if (done === 0) dotLevel = 0;
-        else if (ratio === 1) dotLevel = 3;
-        else if (ratio >= 0.5) dotLevel = 2;
-        else dotLevel = 1;
-        if (done) metaText = `${done}/${total}`;
+  habits.push(name);
+  saveData();
+  showEverything();
+}
+
+// Called when the Delete button on a habit is clicked
+function deleteHabit(name) {
+  let sure = confirm("Delete the habit '" + name + "'?");
+  if (sure === false) {
+    return;
+  }
+
+  // Make a new list without that habit
+  let newHabits = [];
+  for (let i = 0; i < habits.length; i++) {
+    if (habits[i] !== name) {
+      newHabits.push(habits[i]);
+    }
+  }
+  habits = newHabits;
+
+  // Also remove it from the completed history
+  for (let date in completed) {
+    let cleaned = [];
+    for (let i = 0; i < completed[date].length; i++) {
+      if (completed[date][i] !== name) {
+        cleaned.push(completed[date][i]);
       }
-    } else {
-      dotLevel = dayLog[calFilter] ? 3 : 0;
-      if (dotLevel) metaText = '✓';
     }
+    completed[date] = cleaned;
+  }
 
-    cell.classList.add('dot-' + dotLevel);
-    if (dotLevel > 0) cell.classList.add('has-data');
-    if (k === todayK) cell.classList.add('today');
+  saveData();
+  showEverything();
+}
 
-    cell.innerHTML = `
-      <div class="cell-date">${dayNum}</div>
-      ${metaText ? `<div class="cell-meta">${metaText}</div>` : ''}
-    `;
 
-    if (dotLevel > 0) {
-      cell.title = k + ' — ' + metaText;
+/* =====================================================
+   SECTION 4 (Team Member 4)
+   MARK HABITS DONE + STREAK CALCULATIONS
+   ===================================================== */
+
+// Called when the "Done" or "Undo" button is clicked.
+// If the habit isn't done today, mark it done. Otherwise un-mark it.
+function toggleHabit(name) {
+  let today = getTodayString();
+
+  // Make sure today's list exists
+  if (!completed[today]) {
+    completed[today] = [];
+  }
+
+  // See if this habit is already in today's list
+  let alreadyDone = false;
+  for (let i = 0; i < completed[today].length; i++) {
+    if (completed[today][i] === name) {
+      alreadyDone = true;
     }
-
-    grid.appendChild(cell);
-  }
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
-
-// ------------------- Modal -------------------
-const modal = document.getElementById('habitModal');
-
-function openModal(habit = null) {
-  editingId = habit ? habit.id : null;
-  document.getElementById('modalTitle').textContent = habit ? 'Edit habit' : 'New habit';
-  document.getElementById('habitName').value = habit ? habit.name : '';
-  document.getElementById('habitEmoji').value = habit ? habit.emoji : '💧';
-  document.getElementById('habitColor').value = habit ? habit.color : '#38bdf8';
-  document.getElementById('habitId').value = habit ? habit.id : '';
-  document.getElementById('deleteHabitBtn').classList.toggle('hidden', !habit);
-
-  // mark selected emoji + color
-  for (const btn of document.querySelectorAll('#emojiPicker button')) {
-    btn.classList.toggle('selected', btn.dataset.emoji === document.getElementById('habitEmoji').value);
-  }
-  for (const btn of document.querySelectorAll('#colorPicker button')) {
-    btn.classList.toggle('selected', btn.dataset.color === document.getElementById('habitColor').value);
   }
 
-  modal.classList.remove('hidden');
-  setTimeout(() => document.getElementById('habitName').focus(), 50);
-}
-
-function closeModal() { modal.classList.add('hidden'); }
-
-function saveHabitFromForm(e) {
-  e.preventDefault();
-  const name  = document.getElementById('habitName').value.trim();
-  const emoji = document.getElementById('habitEmoji').value;
-  const color = document.getElementById('habitColor').value;
-  const id    = document.getElementById('habitId').value;
-  if (!name) return;
-
-  if (id) {
-    const h = state.habits.find(x => x.id === id);
-    if (h) { h.name = name; h.emoji = emoji; h.color = color; }
+  if (alreadyDone === true) {
+    // Remove it from the list
+    let newList = [];
+    for (let i = 0; i < completed[today].length; i++) {
+      if (completed[today][i] !== name) {
+        newList.push(completed[today][i]);
+      }
+    }
+    completed[today] = newList;
   } else {
-    state.habits.push({ id: uuid(), name, emoji, color, createdAt: todayKey() });
+    // Add it to the list
+    completed[today].push(name);
   }
-  saveState();
-  closeModal();
-  render();
+
+  saveData();
+  showEverything();
 }
 
-function deleteHabit() {
-  if (!editingId) return;
-  if (!confirm('Delete this habit and all its history? This cannot be undone.')) return;
-  state.habits = state.habits.filter(h => h.id !== editingId);
-  // remove from log too
-  for (const k of Object.keys(state.log)) {
-    delete state.log[k][editingId];
-    if (!Object.keys(state.log[k]).length) delete state.log[k];
+// Check if a habit was done on a certain date
+function wasDoneOn(name, dateString) {
+  if (!completed[dateString]) {
+    return false;
   }
-  saveState();
-  closeModal();
-  render();
-}
-
-// ------------------- Confetti -------------------
-function confettiBurst() {
-  const canvas = document.getElementById('confetti');
-  const ctx = canvas.getContext('2d');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const colors = ['#7c5cff', '#22d3ee', '#34d399', '#fbbf24', '#f472b6', '#f87171'];
-  const pieces = [];
-  for (let i = 0; i < 110; i++) {
-    pieces.push({
-      x: canvas.width / 2,
-      y: canvas.height / 2,
-      vx: (Math.random() - 0.5) * 14,
-      vy: (Math.random() - 1.2) * 14,
-      g: 0.35 + Math.random() * 0.2,
-      size: 6 + Math.random() * 6,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      rot: Math.random() * Math.PI,
-      vr: (Math.random() - 0.5) * 0.3,
-      life: 0,
-    });
+  for (let i = 0; i < completed[dateString].length; i++) {
+    if (completed[dateString][i] === name) {
+      return true;
+    }
   }
-  let frames = 0;
-  function loop() {
-    frames++;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (const p of pieces) {
-      p.vy += p.g;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.rot += p.vr;
-      p.life++;
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-      ctx.restore();
-    }
-    if (frames < 140) requestAnimationFrame(loop);
-    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  return false;
+}
+
+// Current streak = how many days in a row (counting back from today)
+// the user has done at least one habit.
+function calculateCurrentStreak() {
+  let streak = 0;
+  let date = new Date();
+
+  // If today has nothing yet, start counting from yesterday instead
+  let todayKey = getTodayString();
+  if (!completed[todayKey] || completed[todayKey].length === 0) {
+    date.setDate(date.getDate() - 1);
   }
-  loop();
-}
 
-// ------------------- Theme -------------------
-function applyTheme(theme) {
-  if (theme === 'light') document.body.classList.add('light');
-  else document.body.classList.remove('light');
-  document.getElementById('themeToggle').textContent = theme === 'light' ? '☀️' : '🌙';
-}
-function toggleTheme() {
-  const newTheme = document.body.classList.contains('light') ? 'dark' : 'light';
-  localStorage.setItem(THEME_KEY, newTheme);
-  applyTheme(newTheme);
-}
-
-// ------------------- Event wiring -------------------
-function wire() {
-  document.getElementById('addHabitBtn').addEventListener('click', () => openModal(null));
-
-  document.getElementById('habitsList').addEventListener('click', (e) => {
-    const t = e.target.closest('button');
-    if (!t) return;
-    if (t.dataset.toggle) {
-      toggleHabit(t.dataset.toggle);
-      render();
-    } else if (t.dataset.edit) {
-      const h = state.habits.find(x => x.id === t.dataset.edit);
-      if (h) openModal(h);
+  // Count backwards day by day
+  while (true) {
+    let key = formatDate(date);
+    if (completed[key] && completed[key].length > 0) {
+      streak = streak + 1;
+      date.setDate(date.getDate() - 1);
+    } else {
+      break;
     }
-  });
-
-  document.querySelectorAll('.preset-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.habits.push({
-        id: uuid(),
-        name: btn.dataset.name,
-        emoji: btn.dataset.emoji,
-        color: btn.dataset.color,
-        createdAt: todayKey(),
-      });
-      saveState();
-      render();
-    });
-  });
-
-  // Modal
-  document.getElementById('modalClose').addEventListener('click', closeModal);
-  document.getElementById('cancelHabitBtn').addEventListener('click', closeModal);
-  document.getElementById('deleteHabitBtn').addEventListener('click', deleteHabit);
-  document.getElementById('habitForm').addEventListener('submit', saveHabitFromForm);
-  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-
-  document.getElementById('emojiPicker').addEventListener('click', (e) => {
-    const b = e.target.closest('button'); if (!b) return;
-    document.getElementById('habitEmoji').value = b.dataset.emoji;
-    document.querySelectorAll('#emojiPicker button').forEach(x => x.classList.toggle('selected', x === b));
-  });
-  document.getElementById('colorPicker').addEventListener('click', (e) => {
-    const b = e.target.closest('button'); if (!b) return;
-    document.getElementById('habitColor').value = b.dataset.color;
-    document.querySelectorAll('#colorPicker button').forEach(x => x.classList.toggle('selected', x === b));
-  });
-
-  // Calendar
-  document.getElementById('calPrev').addEventListener('click', () => {
-    viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
-    renderCalendar();
-  });
-  document.getElementById('calNext').addEventListener('click', () => {
-    viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
-    renderCalendar();
-  });
-  document.getElementById('calHabitFilter').addEventListener('change', (e) => {
-    calFilter = e.target.value;
-    renderCalendar();
-  });
-
-  // Theme
-  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
-
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
-    if (e.key === 'n' && !modal.classList.contains('hidden') === false && document.activeElement.tagName !== 'INPUT') {
-      // n to add when modal isn't open
-      if (modal.classList.contains('hidden')) { e.preventDefault(); openModal(null); }
+    // Safety stop so the loop can't run forever
+    if (streak > 1000) {
+      break;
     }
-  });
+  }
 
-  // Refresh "today" if app stays open across midnight
-  setInterval(() => {
-    const cur = todayKey();
-    if (cur !== window.__lastDayKey) {
-      window.__lastDayKey = cur;
-      render();
+  return streak;
+}
+
+// Longest streak ever (the best run in history)
+function calculateLongestStreak() {
+  // Get every date that has at least one completed habit
+  let dates = [];
+  for (let date in completed) {
+    if (completed[date].length > 0) {
+      dates.push(date);
     }
-  }, 60 * 1000);
-  window.__lastDayKey = todayKey();
+  }
+
+  // Sort them in order (oldest to newest)
+  dates.sort();
+
+  let longest = 0;
+  let current = 0;
+  let previousDate = null;
+
+  for (let i = 0; i < dates.length; i++) {
+    let date = dates[i];
+
+    if (previousDate !== null && isNextDay(previousDate, date)) {
+      current = current + 1;
+    } else {
+      current = 1;
+    }
+
+    if (current > longest) {
+      longest = current;
+    }
+
+    previousDate = date;
+  }
+
+  return longest;
 }
 
-// ------------------- Boot -------------------
-function boot() {
-  applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
-  wire();
-  render();
+// Returns true if dateString2 is the day right after dateString1
+function isNextDay(dateString1, dateString2) {
+  let d = new Date(dateString1 + "T00:00:00");
+  d.setDate(d.getDate() + 1);
+  return formatDate(d) === dateString2;
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', boot);
-} else {
-  boot();
+
+/* =====================================================
+   SECTION 5 (Team Member 5)
+   CALENDAR VIEW
+   ===================================================== */
+
+function showCalendar() {
+  let now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth();
+
+  // Show the month name + year at the top
+  let monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  document.getElementById("calendarTitle").textContent =
+    monthNames[month] + " " + year;
+
+  // Find what weekday the 1st of the month falls on (0 = Sunday)
+  let firstDay = new Date(year, month, 1).getDay();
+
+  // Find the last date number in the month (e.g. 28, 30, 31)
+  let lastDate = new Date(year, month + 1, 0).getDate();
+
+  let html = "";
+
+  // Add empty boxes before day 1 so the grid lines up
+  for (let i = 0; i < firstDay; i++) {
+    html = html + '<div class="calendar-day empty"></div>';
+  }
+
+  // Add the real day boxes
+  let todayDay = now.getDate();
+  for (let day = 1; day <= lastDate; day++) {
+    // Build the date string for this calendar cell
+    let cellDate = new Date(year, month, day);
+    let key = formatDate(cellDate);
+
+    // Figure out the CSS class for this day
+    let cssClass = "calendar-day";
+
+    // How many habits were done that day?
+    let doneCount = 0;
+    if (completed[key]) {
+      doneCount = completed[key].length;
+    }
+
+    if (habits.length > 0 && doneCount === habits.length) {
+      cssClass = cssClass + " done";        // all habits done
+    } else if (doneCount > 0) {
+      cssClass = cssClass + " partial";     // some done
+    }
+
+    if (day === todayDay) {
+      cssClass = cssClass + " today";
+    }
+
+    html = html + '<div class="' + cssClass + '">' + day + '</div>';
+  }
+
+  document.getElementById("calendarGrid").innerHTML = html;
 }
+
+
+/* =====================================================
+   SECTION 6 (Team Member 6)
+   STATS + SHOW THE HABIT LIST
+   ===================================================== */
+
+// How many habits done today divided by total habits, as a percent
+function calculateTodayPercent() {
+  if (habits.length === 0) {
+    return 0;
+  }
+
+  let today = getTodayString();
+  let doneToday = 0;
+  if (completed[today]) {
+    doneToday = completed[today].length;
+  }
+
+  let percent = (doneToday / habits.length) * 100;
+  return Math.round(percent);
+}
+
+// Total habits ever completed (count of all days combined)
+function calculateTotalDone() {
+  let total = 0;
+  for (let date in completed) {
+    total = total + completed[date].length;
+  }
+  return total;
+}
+
+function showStats() {
+  let currentStreak = calculateCurrentStreak();
+  let longestStreak = calculateLongestStreak();
+
+  // The longest streak should always be at least as big as the current one
+  if (currentStreak > longestStreak) {
+    longestStreak = currentStreak;
+  }
+
+  document.getElementById("currentStreak").textContent = currentStreak + " days";
+  document.getElementById("longestStreak").textContent = longestStreak + " days";
+  document.getElementById("todayPercent").textContent = calculateTodayPercent() + "%";
+  document.getElementById("totalDone").textContent = calculateTotalDone();
+}
+
+function showHabitList() {
+  let container = document.getElementById("habitList");
+
+  // If there are no habits, show a friendly message
+  if (habits.length === 0) {
+    container.innerHTML = '<p class="empty-message">No habits yet. Add one above to get started!</p>';
+    return;
+  }
+
+  let today = getTodayString();
+  let html = "";
+
+  for (let i = 0; i < habits.length; i++) {
+    let name = habits[i];
+    let done = wasDoneOn(name, today);
+
+    let rowClass = "habit-item";
+    if (done === true) {
+      rowClass = rowClass + " done";
+    }
+
+    let buttonText = "Done";
+    if (done === true) {
+      buttonText = "Undo";
+    }
+
+    html = html + '<div class="' + rowClass + '">';
+    html = html +   '<span class="habit-name">' + name + '</span>';
+    html = html +   '<div class="habit-buttons">';
+    html = html +     '<button class="done-btn" onclick="toggleHabit(\'' + name + '\')">' + buttonText + '</button>';
+    html = html +     '<button class="delete-btn" onclick="deleteHabit(\'' + name + '\')">Delete</button>';
+    html = html +   '</div>';
+    html = html + '</div>';
+  }
+
+  container.innerHTML = html;
+}
+
+
+/* =====================================================
+   THE MAIN FUNCTION
+   This calls every "show" function so the page updates.
+   Everyone uses this to refresh the screen after a change.
+   ===================================================== */
+
+function showEverything() {
+  showDate();
+  showQuote();
+  showStats();
+  showHabitList();
+  showCalendar();
+}
+
+
+/* =====================================================
+   START THE APP
+   These two lines run when the page loads.
+   ===================================================== */
+
+loadData();
+showEverything();
